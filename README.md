@@ -29,7 +29,8 @@ The main function is defined as follows:
 * `lambdaB`: rate constant for growth of `Kb` during stretching simulation
 	* **NOTE**: Subject to change, form of Kb growth is current pure exponential, may want to change
 * `plotIt`: Binary var. to either draw (`1`) or not draw (`0`) cells during simulation
-Optional Input:
+
+#### Optional Input:
 * `movieFileStr`: If included, save animation to movie file. 
 	* **NOTE**: File will be saved as an .mp4 file, currently does not support other formats.
 
