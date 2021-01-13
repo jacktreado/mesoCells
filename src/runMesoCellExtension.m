@@ -201,7 +201,7 @@ for hh = 1:NSTEPS
     % save state data
     xList{hh}           = x;
     yList{hh}           = y;
-    shapeList(hh,1)     = l0;
+    shapeList(hh,1)     = calA0;
     shapeList(hh,2)     = Kb;
     
     calA                = computeShapeParam(x,y);
