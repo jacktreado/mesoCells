@@ -16,8 +16,8 @@ There is another function, `vertexFIREPinnedVerts.m`, included in the `src` dire
 `runMesoCellExtension.m`. 
 
 The main function is defined as follows:
-`function [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,Kl,Kb,lambdaA,lambdaB,plotIt,movieFileStr)
-`
+
+`function [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,Kl,Kb,lambdaA,lambdaB,plotIt,movieFileStr)`
 
 ### Inputs:
 * `NV`: integer number of vertices that make up the deformable particle (DP)
@@ -25,7 +25,7 @@ The main function is defined as follows:
 	* **NOTE**: MUST be at least <img src="https://render.githubusercontent.com/render/math?math=\leq"> than `NV`
 * `Kl`: mechanical constant for perimeter
 * `Kb`: mechanical constant for curvature
-* `lambdaA`: rate constant for growth/decay of shape parameter `calA0` to instantaneous shape parameter `calA0`
+* `lambdaA`: rate constant for growth/decay of the preferred shape parameter `calA0` based on the instantaneous shape parameter `calA`
 * `lambdaB`: rate constant for growth of `Kb` during stretching simulation
 	* **NOTE**: Subject to change, form of Kb growth is current pure exponential, may want to change
 * `plotIt`: Binary var. to either draw (`1`) or not draw (`0`) cells during simulation
@@ -46,6 +46,7 @@ The main function is defined as follows:
 ## Running the code
 
 To run the code on the command line, simply use
+
 `>> [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,Kl,Kb,lambdaA,lambdaB,plotIt,movieFileStr);`
 
 You can use values instead of variable names for the inputs. If you want to use variables, make sure they are defined in the MATLAB workspace. Remember that you do not need to include `movieFileStr`.
