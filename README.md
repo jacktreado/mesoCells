@@ -18,7 +18,8 @@ There is another function, `vertexFIREPinnedVerts.m`, included in the `src` dire
 The main function is defined as follows:
 `function [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,Kl,Kb,lambdaA,lambdaB,plotIt,movieFileStr)
 `
-###Inputs:
+
+### Inputs:
 * `NV`: integer number of vertices that make up the deformable particle (DP)
 * `NPINS`: integer number of vertices that make up the DP. 
 	* **NOTE**: MUST be at least <img src="https://render.githubusercontent.com/render/math?math=\leq"> than `NV`
@@ -32,7 +33,7 @@ Optional Input:
 * `movieFileStr`: If included, save animation to movie file. 
 	* **NOTE**: File will be saved as an .mp4 file, currently does not support other formats.
 
-###Outputs:
+### Outputs:
 * `hList`: List of pin stretch steps parametrized by variable <img src="https://render.githubusercontent.com/render/math?math=h">. 
 	* **NOTE**: Negative entries mean pins extended out from original cell boundary.
 * `xList`: _x_-coordinates of all cell vertices at each stretch step
