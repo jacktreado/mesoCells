@@ -21,8 +21,8 @@ The main function is defined as follows:
 
 ### Inputs:
 * `NV`: integer number of vertices that make up the deformable particle (DP)
-* `NPINS`: integer number of vertices that make up the DP. 
-	* **NOTE**: MUST be at least <img src="https://render.githubusercontent.com/render/math?math=\leq"> than `NV`
+* `NPINS`: integer number of pins to force the DP to change shape during extension. 
+	* **NOTE**: MUST be at least _less than_ than `NV`
 * `Kl`: mechanical constant for perimeter
 * `Kb`: mechanical constant for curvature
 * `lambdaA`: rate constant for growth/decay of the preferred shape parameter `calA0` based on the instantaneous shape parameter `calA`
