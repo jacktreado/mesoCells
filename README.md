@@ -23,10 +23,12 @@ The main function is defined as follows:
 * `NV`: integer number of vertices that make up the deformable particle (DP)
 * `NPINS`: integer number of pins to force the DP to change shape during extension 
 	* **NOTE**: MUST be at least _less than_ `NV`
+* `calA0Init`: initial **preferred** shape parameter, will change if you make `cL` greater than 0. 
+	* Note that `calA0Init` should be greater than or equal to 1 always. 
 * `Kl`: mechanical constant for perimeter
 * `Kb`: mechanical constant for curvature
-* `lambdaA`: rate constant for growth/decay of the preferred shape parameter `calA0` based on the instantaneous shape parameter `calA`
-* `lambdaB`: rate constant for growth of `Kb` during stretching simulation
+* `cL`: rate constant for growth/decay of the preferred shape parameter `calA0` based on the instantaneous shape parameter `calA`
+* `cB`: rate constant for growth of preferred angles `th0` during stretching simulation
 	* **NOTE**: Subject to change, form of Kb growth is current pure exponential, may want to change
 * `plotIt`: Binary var. to either draw (`1`) or not draw (`0`) cells during simulation
 
@@ -40,7 +42,7 @@ The main function is defined as follows:
 * `xList`: _x_-coordinates of all cell vertices at each stretch step
 * `yList`: _y_-coordinates of all cell vertices at each stretch step
 	* **NOTE**: Coordinates are stored as MATLAB `cell` variables. To access at step `ii`, use syntax `x{ii}` or `y{ii}`.
-* `shapeList`: List of relevant shape information during simulation. Column 1 is `calA0`, column 2 is `Kb.`
+* `shapeList`: List of relevant shape information during simulation. Column 1 is `calA0`, column 2 is `Kb`, column 3 is preferred angles `th0` 
 * `calAList`: Instantaneous shape parameter <img src="https://render.githubusercontent.com/render/math?math=\mathcal{A} = p^2/4\pi a"> during stretching simulation.
 
 ## Running the code
