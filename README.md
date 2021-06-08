@@ -38,7 +38,7 @@ The main function is defined as follows:
 
 ### Outputs:
 * `hList`: List of pin stretch steps parametrized by variable <img src="https://render.githubusercontent.com/render/math?math=h">. 
-	* **NOTE**: Negative entries mean pins extended out from original cell boundary.
+	* **NOTE**: h is unitless, defined as the distance travelled outside of the original perimeter divided by the vertex radius.
 * `xList`: _x_-coordinates of all cell vertices at each stretch step
 * `yList`: _y_-coordinates of all cell vertices at each stretch step
 	* **NOTE**: Coordinates are stored as MATLAB `cell` variables. To access at step `ii`, use syntax `x{ii}` or `y{ii}`.
