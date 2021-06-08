@@ -137,9 +137,9 @@ y0 = y;
 %% Extension sim setup
 
 % overlap list
-hStep       = -0.02;
-hI          = 1.0;
-hF          = -1.5;
+hStep       = 0.02;
+hI          = 0;
+hF          = 3.0;
 hList       = hI:hStep:hF;
 NSTEPS      = length(hList);
 
@@ -168,8 +168,8 @@ for hh = 1:NSTEPS
     h = hList(hh);
     
     % -- Assign next pin locations
-    x(pinds) = x0(pinds) + (1 - h)*l0*ux(pinds);
-    y(pinds) = y0(pinds) + (1 - h)*l0*uy(pinds);
+    x(pinds) = x0(pinds) + h*l0*ux(pinds);
+    y(pinds) = y0(pinds) + h*l0*uy(pinds);
     
     % relax particle shape based on external force
     [x, y, thi] = vertexFIREPinnedVerts(x,y,pinds,a0,l0,th0,Ka,Kl,Kb,dt0,Ftol);
