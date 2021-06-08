@@ -1,37 +1,12 @@
-function [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,Kl,Kb,lambdaA,lambdaB,plotIt,varargin)
+function [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,calA0Init,Kl,Kb,cL,cB,plotIt,varargin)
 %% FUNCTION to run single-cell extension code to test cell shape
 % Code takes in cell parameters and extends equally-separated vertices
 % to a set maximum extension, records shape data along the way
-% *
-% *
-% REQUIRED INPUTS
-% -- NV: number of vertices (must be integer > 3)
-% -- NPINS: number of pins (3 is expected, but can be made any number <=
-%       NV). Note that if NPINS does not divide nicely into NV, pins may be added
-%       or deleted to satisfy even spacing
-% -- Kl: perimeter mechanical parameter
-% -- Kb: bending mechanical parameter
-% -- lambdaA: rate constant for growth of calA0 during extension (0 = off, small =
-%       slow, large = fast)
-% -- lambdaB: rate constant for growth of Kb during extension (0 = off, small =
-%       slow, large = fast)
-% -- plotIt: If 1, draw cell (slower but insightful). Else, does not draw
-%       cell
-% *
-% *
-% OPTIONAL INPUTS
-% -- movieFileStr: path to movie file name (must be a string variable)
-%       NOTE: if not included, movie will not save
-% *
-% *
-% OUTPUT
-% -- NSTEPS: number of extension steps taken
-% -- x,y: cells, location of each vertex in space during extension
-% -- calA: list of instantaneous shape parameters during extension
-% *
-% *
+% 
+% see README on github page for function information
 
-
+% always Ka = 1
+Ka = 1.0;
 
 % -- Check Inputs
 
@@ -72,7 +47,7 @@ end
 % --  Check for movie string
 makeAMovie = 0;
 if ~isempty(varargin)
-    if nargin == 8
+    if nargin == 9
         movieFileStr = varargin{1};
         if ischar(movieFileStr)
             fprintf('.\n** Also saving animation to location %s, setting plotIt -> 1.\n** Beginning simulation!',movieFileStr);
@@ -94,11 +69,11 @@ end
 %% Initialization
 
 % simulation parameters
-phi0    = 0.1;                      % cell packing fraction
-calA0   = 1.01*NV*tan(pi/NV)/pi;    % initial shape parameter (1.01 * minimum)
-dt0     = 0.001;                    % time step magnitude
-a0      = 1.0;                      % initial preferred area
-Ftol    = 1e-8;                     % force tolerance for minimization
+phi0    = 0.1;                              % cell packing fraction
+calA0   = calA0Init*NV*tan(pi/NV)/pi;       % initial shape parameter (1.01 * minimum)
+dt0     = 0.001;                            % time step magnitude
+a0      = 1.0;                              % initial preferred area
+Ftol    = 1e-8;                             % force tolerance for minimization
 
 % seed random number generator
 rng('shuffle');
@@ -111,6 +86,7 @@ r = zeros(NV,1);
 % polygon vertex-based radii
 r0 = sqrt((2.0*a0)/(NV*sin((2.0*pi)/NV)));
 l0 = 2.0*sqrt(pi*calA0*a0)/NV;
+th0 = ((2.0*pi)/NV).*ones(NV,1);
 
 % vertex positions
 L = sqrt(a0/phi0);
@@ -119,6 +95,9 @@ for vv = 1:NV
     y(vv) = r0*sin(2.0*pi*vv/NV) + 0.5*L + 0.01*l0*randn;
     r(vv) = 0.5*l0;
 end
+
+% vertex indexing
+ip1 = [2:NV 1];
 
 % PIN INFO
 pstep   = round(NV/NPINS);
@@ -130,7 +109,7 @@ elseif length(pinds) > NPINS
 end
 
 % use FIRE to relax coordinates to energy minimum without pins
-[x, y] = vertexFIREPinnedVerts(x,y,[],a0,l0,Kl,Kb,dt0,Ftol);
+[x, y, ~] = vertexFIREPinnedVerts(x,y,[],a0,l0,th0,Ka,Kl,Kb,dt0,Ftol);
 
 % draw initial cell
 calA = computeShapeParam(x,y);
@@ -180,7 +159,7 @@ uy = ry./rs;
 % save data
 xList = cell(NSTEPS,1);
 yList = cell(NSTEPS,1);
-shapeList = zeros(NSTEPS,2);
+shapeList = cell(NSTEPS,3);
 calAList = zeros(NSTEPS,1);
 
 % Loop over pinned positions, plot / animate
@@ -193,35 +172,34 @@ for hh = 1:NSTEPS
     y(pinds) = y0(pinds) + (1 - h)*l0*uy(pinds);
     
     % relax particle shape based on external force
-    [x, y] = vertexFIREPinnedVerts(x,y,pinds,a0,l0,Kl,Kb,dt0,Ftol);
+    [x, y, thi] = vertexFIREPinnedVerts(x,y,pinds,a0,l0,th0,Ka,Kl,Kb,dt0,Ftol);
+    thi = -thi;
     
-    % print to console
-    fprintf('-- On cumulative h = %0.4g, calA0 = %0.4g, calA = %0.4g\n',h,calA0,calA);
+    % age perimeter and bending
+    lx = x(ip1) - x;
+    ly = y(ip1) - y;
+    l = sqrt(lx.^2 + ly.^2);
+    lmean = mean(l);
+    
+    % lag toward preferred
+    l0 = l0 + cL*(lmean - l0);
+    th0 = th0 + cB*(thi - th0);
     
     % save state data
     xList{hh}           = x;
     yList{hh}           = y;
-    shapeList(hh,1)     = calA0;
-    shapeList(hh,2)     = Kb;
+    shapeList{hh,1}     = calA0;
+    shapeList{hh,2}     = Kb;
+    shapeList{hh,3}     = th0;
     
     calA                = computeShapeParam(x,y);
     calAList(hh)        = calA;
     
-    % update l0
-    lx = x([2:end 1]) - x;
-    ly = y([2:end 1]) - y;
-    l = sqrt(lx.^2 + ly.^2);
-    meanl = mean(l);
-    
-    dl0dt = (meanl - l0)*lambdaA;
-    l0 = l0 + dl0dt;
-    calA0 = (NV*l0)^2/(4*pi*a0);
-    
-    % update Kb
-    Kb = (1 + lambdaB)*Kb;
-    
+    % print to console
+    fprintf('-- On cumulative h = %0.4g, calA0 = %0.4g, calA = %0.4g\n',h,calA0,calA);
+   
     % draw overlap of initial and final
-    if abs(hStep) >= 0.002 && plotIt == 1
+    if plotIt == 1
         figure(2), clf, hold on, box on;
 
         for vv = 1:NV

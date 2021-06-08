@@ -1,4 +1,4 @@
-function [x, y] = vertexFIREPinnedVerts(x,y,pinds,a0,l0,Kl,Kb,dt0,Ftol)
+function [x, y, thi] = vertexFIREPinnedVerts(x,y,pinds,a0,l0,th0,Ka,Kl,Kb,dt0,Ftol)
 %% Function to relax shape energy with pinned vertices
 
 % get number of vertices (check inputs)
@@ -18,9 +18,9 @@ ip1 = [2:NV 1];
 
 % force parameters
 rho0            = sqrt(a0);                 % units: length
-fa              = 1/rho0;                   % units: inv length, because of grad a
+fa              = Ka/rho0;                  % units: inv length, because of grad a
 fl              = Kl*(rho0/l0);             % units: dim. less
-fb              = Kb*(rho0/(l0*l0));        % units: inv length, because of length in force expression
+fb              = Kb/rho0;                  % units: inv length
 
 % initialize velocites to zero
 vx = zeros(NV,1);
@@ -30,20 +30,16 @@ vy = zeros(NV,1);
 fx = zeros(NV,1);
 fy = zeros(NV,1);
 
-fxold = zeros(NV,1);
-fyold = zeros(NV,1);
-
 % FIRE VARIABLES (hard code in)
-alpha0      = 0.1;
+alpha0      = 0.2;
 finc        = 1.01;
 fdec        = 0.5;
 falpha      = 0.99;
 dtmax       = 10*dt0;
-dtmin       = 1e-8*dt0;
+dtmin       = 1e-2*dt0;
 dt          = dt0;
-NMIN        = 20;
 NNEGMAX     = 5000;
-NDELAY      = 100;
+NDELAY      = 20;
 npPos       = 0;
 npNeg       = 0;
 npPMin      = 0;
@@ -52,7 +48,6 @@ plotskip    = 2e4;
 
 % force check
 fcheck = 10*Ftol;
-kcheck = 0;
 
 % get dynamic indices
 di = false(NV,1);
@@ -67,30 +62,25 @@ NVMOB = NV - length(pinds);
 it = 0;
 itmax = 5e6;
 % loop over FIRE protocol while fcheck and kcheck are above minimum
-while((fcheck > Ftol || npPMin < NMIN) && it < itmax)
+while(fcheck > Ftol && it < itmax)
     % update iterate
     it = it + 1;
     
     % Step 1. calculate P, fnorm, vnorm
     P = sum(fx(di).*vx(di)) + sum(fy(di).*vy(di));
-    vnorm = sqrt(sum(vx(di).*vx(di)) + sum(vy(di).*vy(di)));
-    fnorm = sqrt(sum(fx(di).*fx(di)) + sum(fy(di).*fy(di)));
-    
+
     % plot FIRE information 
-    if mod(it,plotskip) == 0 || it == 1
-        fprintf('\nOn FIRE (pinned vertices) step %d\n',it);
+    if mod(it,plotskip) == 0
+        fprintf('\nOn FIRE step %d\n',it);
         fprintf('\t ** F = %0.5g\n',fcheck);
-        fprintf('\t ** K = %0.5g\n',kcheck);
         fprintf('\t ** dt = %0.5g\n',dt);
         fprintf('\t ** P = %0.5g\n',P);
-        fprintf('\t ** Pdir = %0.5g\n',P/(vnorm*fnorm));
         fprintf('\t ** alpha = %0.5g\n',alpha);
-        fprintf('\t ** vnorm = %0.5g\n',vnorm);
-        fprintf('\t ** fnorm = %0.5g\n\n',fnorm);
+        fprintf('\t ** npPMin = %d\n',npPMin);
     end
     
     % Step 2. adjust simulation based on net motion of system
-    if (P > 0)
+    if P > 0
         % increase positive counter
         npPos = npPos + 1;
         
@@ -98,7 +88,7 @@ while((fcheck > Ftol || npPMin < NMIN) && it < itmax)
         npNeg = 0;
         
         % alter simulation if enough positive steps have been taken
-        if (npPos > NMIN)
+        if (npPos > NDELAY)
             % change time step
             if (dt*finc < dtmax)
                 dt = dt*finc;
@@ -121,7 +111,7 @@ while((fcheck > Ftol || npPMin < NMIN) && it < itmax)
         end
         
         % decrease time step if past initial delay
-        if (it > NMIN)
+        if (it > NDELAY)
             % decrease time step
             if (dt*fdec > dtmin)
                 dt = dt*fdec;
@@ -132,13 +122,22 @@ while((fcheck > Ftol || npPMin < NMIN) && it < itmax)
         end
         
         % take a half step backwards
-        x(di) = x(di) - 0.5*dt*vx(di) - 0.25*dt*dt*fxold(di);
-        y(di) = y(di) - 0.5*dt*vy(di) - 0.25*dt*dt*fyold(di);
+        x(di) = x(di) - 0.5*dt*vx(di);
+        y(di) = y(di) - 0.5*dt*vy(di);
         
         % reset velocities to 0
         vx = zeros(NV,1);
         vy = zeros(NV,1);
     end
+    
+    % Step 1 (VV)
+    vx(di) = vx(di) + 0.5*dt*fx(di);
+    vy(di) = vy(di) + 0.5*dt*fy(di);
+    
+    % update vnorm and fnorm for FIRE
+    vnorm = sqrt(sum(vx(di).*vx(di)) + sum(vy(di).*vy(di)));
+    fnorm = sqrt(sum(fx(di).*fx(di)) + sum(fy(di).*fy(di)));
+
     
     % update velocities if forces are acting
     if fnorm > 0
@@ -147,8 +146,8 @@ while((fcheck > Ftol || npPMin < NMIN) && it < itmax)
     end
     
     % do first verlet update for vertices (assume unit mass)
-    x(di) = x(di) + dt*vx(di) + 0.5*dt*dt*fxold(di);
-    y(di) = y(di) + dt*vy(di) + 0.5*dt*dt*fyold(di);
+    x(di) = x(di) + dt*vx(di);
+    y(di) = y(di) + dt*vy(di);
     
     % update area
     a = polyarea(x, y);
@@ -183,8 +182,8 @@ while((fcheck > Ftol || npPMin < NMIN) && it < itmax)
     fly = fl*(dli.*ulvy - dlim1.*ulvy(im1));
     
     % add to total force
-    fx(di) = fx(di) + flx(di);
-    fy(di) = fy(di) + fly(di);
+    fx = fx + flx;
+    fy = fy + fly;
     
     
     % -- area force
@@ -195,43 +194,47 @@ while((fcheck > Ftol || npPMin < NMIN) && it < itmax)
     fay = fa*0.5*areaStrain.*(x(ip1) - x(im1));
     
     % add to total force
-    fx(di) = fx(di) + fax(di);
-    fy(di) = fy(di) + fay(di);
+    fx = fx + fax;
+    fy = fy + fay;
     
     % -- bending force
     
-    % s vectors
-    six = lvx - lvx(im1);
-    siy = lvy - lvy(im1);
+    % get sine + cosine
+    si = lvx.*lvy(im1) - lvy.*lvx(im1);
+    ci = lvx.*lvx(im1) + lvy.*lvy(im1);
+    thi = atan2(si,ci);
+    dth = thi - th0;
     
-    % bending force at this iteration
-    fbx = fb*(2.0*six - six(im1) - six(ip1));
-    fby = fb*(2.0*siy - siy(im1) - siy(ip1));
+    % get normal vector
+    nix = lvy;
+    niy = -lvx;
+    
+    % construct force components
+    fbix = (dth - dth(ip1)).*nix./(l.^2);
+    fbiy = (dth - dth(ip1)).*niy./(l.^2);
+    
+    fbim1x = -fbix(im1);
+    fbim1y = -fbiy(im1);
+    
+    % add up forces
+    fbx = fb*(fbim1x + fbix);
+    fby = fb*(fbim1y + fbiy);
     
     % add to force
-    fx(di) = fx(di) + fbx(di);
-    fy(di) = fy(di) + fby(di);
+    fx = fx + fbx;
+    fy = fy + fby;
     
-    % do second verlet update for vertices
-    vx(di) = vx(di) + dt*0.5*(fx(di) + fxold(di));
-    vy(di) = vy(di) + dt*0.5*(fy(di) + fyold(di));
-    
-    fxold = fx;
-    fyold = fy;
-    
-    % update Kcheck and Fcheck
-    fcheck = sqrt(sum(fx(di).^2 + fy(di).^2))/NVMOB;
-    kcheck = 0.5*sum(vx(di).^2 + vy(di).^2)/NVMOB;
-    if fcheck < Ftol && it > NDELAY
-        npPMin = npPMin + 1;
-    else
-        npPMin = 0;
-    end
+    % step 3 (VV)
+    vx(di) = vx(di) + 0.5*dt*fx(di);
+    vy(di) = vy(di) + 0.5*dt*fy(di);
+
+    % update force check
+    fcheck = sqrt(sum(fx(di).^2 + fy(di).^2)/NVMOB);
 end
 if (it == itmax)
     error('     ERROR: FIRE did not converge in itmax iterations, ending.\n');
 else
-    fprintf('\t FIRE converged, F = %0.5g, K = %0.5g\n',fcheck,kcheck);
+    fprintf('\t FIRE converged, F = %0.5g\n',fcheck);
 end
 
 end
