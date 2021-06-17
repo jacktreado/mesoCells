@@ -34,7 +34,7 @@ The main function is defined as follows:
 
 #### Optional Input:
 * `movieFileStr`: If included, save animation to movie file. 
-	* **NOTE**: File will be saved as an .mp4 file, currently does not support other formats.
+	* **NOTE**: File string must end with the `.mp4` extension, currently does not support other formats.
 
 ### Outputs:
 * `hList`: List of pin stretch steps parametrized by variable <img src="https://render.githubusercontent.com/render/math?math=h">. 

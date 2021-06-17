@@ -1,4 +1,4 @@
-function [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,calA0Init,Kl,Kb,cL,cB,plotIt,varargin)
+function [hList, xList, yList, shapeList, calAList] = runMesoCellExtension(NV,NPINS,calA0Init,Kl,KbInit,cL,cB,cKb,plotIt,varargin)
 %% FUNCTION to run single-cell extension code to test cell shape
 % Code takes in cell parameters and extends equally-separated vertices
 % to a set maximum extension, records shape data along the way
@@ -31,10 +31,10 @@ else
     fprintf(', Kl = %0.4g',Kl);
 end
 
-if Kb < 0
-    error('runMesoCellExtension:inputKb','\nINPUT Kb is < 0, energy would be incorrect. Ending.');
+if KbInit < 0
+    error('runMesoCellExtension:inputKb','\nINPUT KbInit is < 0, energy would be incorrect. Ending.');
 else
-    fprintf(', Kb = %0.4g',Kb);
+    fprintf(', KbInit = %0.4g',KbInit);
 end
 
 % -- Plot information
@@ -47,7 +47,7 @@ end
 % --  Check for movie string
 makeAMovie = 0;
 if ~isempty(varargin)
-    if nargin == 9
+    if nargin == 10
         movieFileStr = varargin{1};
         if ischar(movieFileStr)
             fprintf('.\n** Also saving animation to location %s, setting plotIt -> 1.\n** Beginning simulation!',movieFileStr);
@@ -60,7 +60,7 @@ if ~isempty(varargin)
             error('runMesoCellExtension:movieFileStringWrong','\n8th argument must be string for movie file name. Ending');
         end
     else
-        error('runMesoCellExtension:tooManyArgs','\nToo many additional arguments. Must either have 7 or 8 input, last must be string. Ending');
+        error('runMesoCellExtension:tooManyArgs','\nToo many additional arguments. Must either have 9 or 10 input, last must be string. Ending');
     end
 else
     fprintf('.\n** Beginning simulation!\n');
@@ -88,6 +88,9 @@ r0 = sqrt((2.0*a0)/(NV*sin((2.0*pi)/NV)));
 l0 = 2.0*sqrt(pi*calA0*a0)/NV;
 th0 = ((2.0*pi)/NV).*ones(NV,1);
 
+% initialize bending energy around boundary
+Kb = KbInit.*ones(NV,1);
+
 % vertex positions
 L = sqrt(a0/phi0);
 for vv = 1:NV
@@ -106,6 +109,14 @@ if length(pinds) <= NPINS
     NPINS   = length(pinds);
 elseif length(pinds) > NPINS
     pinds   = pinds(1:NPINS);
+end
+
+% do 2 paired vertices
+pinds2 = pinds + 1;
+pairedpins = zeros(1,2*NPINS);
+for pp = 1:NPINS
+    pairedpins(2*pp-1) = pinds(pp);
+    pairedpins(2*pp) = pinds2(pp);
 end
 
 % use FIRE to relax coordinates to energy minimum without pins
@@ -171,8 +182,11 @@ for hh = 1:NSTEPS
     x(pinds) = x0(pinds) + h*l0*ux(pinds);
     y(pinds) = y0(pinds) + h*l0*uy(pinds);
     
+    x(pinds2) = x0(pinds2) + h*l0*ux(pinds);
+    y(pinds2) = y0(pinds2) + h*l0*uy(pinds);
+    
     % relax particle shape based on external force
-    [x, y, thi] = vertexFIREPinnedVerts(x,y,pinds,a0,l0,th0,Ka,Kl,Kb,dt0,Ftol);
+    [x, y, thi] = vertexFIREPinnedVerts(x,y,pairedpins,a0,l0,th0,Ka,Kl,Kb,dt0,Ftol);
     thi = -thi;
     
     % age perimeter and bending
@@ -184,6 +198,12 @@ for hh = 1:NSTEPS
     % lag toward preferred
     l0 = l0 + cL*(lmean - l0);
     th0 = th0 + cB*(thi - th0);
+    
+    % increase Kb proportional to the absolute value of the angle
+    Kb = Kb + cKb.*Kb.*abs(thi);
+    
+    % update calA0
+    calA0 = (NV*l0)^2/(4.0*pi*a0);
     
     % save state data
     xList{hh}           = x;
@@ -206,7 +226,7 @@ for hh = 1:NSTEPS
             xv = x(vv) - r(vv);
             yv = y(vv) - r(vv);
             wv = 2.0*r(vv);
-            if sum(vv == pinds) == 0
+            if sum(vv == pairedpins) == 0
                 rectangle('Position',[xv, yv, wv, wv],'Curvature',[1 1],'EdgeColor','k','FaceColor',clr);
             else
                 rectangle('Position',[xv, yv, wv, wv],'Curvature',[1 1],'EdgeColor','k','FaceColor',1 - clr);

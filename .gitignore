@@ -2,3 +2,4 @@
 *.png
 *.o
 *.dat
+.DS_Store

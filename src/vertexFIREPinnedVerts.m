@@ -20,7 +20,7 @@ ip1 = [2:NV 1];
 rho0            = sqrt(a0);                 % units: length
 fa              = Ka/rho0;                  % units: inv length, because of grad a
 fl              = Kl*(rho0/l0);             % units: dim. less
-fb              = Kb/rho0;                  % units: inv length
+fb              = Kb./rho0;                 % units: inv length
 
 % initialize velocites to zero
 vx = zeros(NV,1);
@@ -217,8 +217,8 @@ while(fcheck > Ftol && it < itmax)
     fbim1y = -fbiy(im1);
     
     % add up forces
-    fbx = fb*(fbim1x + fbix);
-    fby = fb*(fbim1y + fbiy);
+    fbx = fb.*(fbim1x + fbix);
+    fby = fb.*(fbim1y + fbiy);
     
     % add to force
     fx = fx + fbx;
