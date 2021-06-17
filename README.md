@@ -54,4 +54,4 @@ To run the code on the command line, simply use
 
 You can use values instead of variable names for the inputs. If you want to use variables, make sure they are defined in the MATLAB workspace. Remember that you do not need to include `movieFileStr`.
 
- 
+End of README.md
